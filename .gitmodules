@@ -1,0 +1,3 @@
+[submodule "sggmi/sjson"]
+	path = sggmi/sjson
+	url = https://github.com/SGG-Modding/sjson.git
