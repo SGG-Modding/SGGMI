@@ -487,9 +487,11 @@ def start(config):
     for mod in config.mods_dir.iterdir():
         modfile_load(mod / config.mod_file, config)
 
-    deploy_mods(config)
+    deploy_mods(todeploy,config)
 
-    alt_print(f"\nModified files for {config.chosen_profile} mods:", config=config)
+    chosen_profile = config.chosen_profile if config.chosen_profile else "empty profile"
+
+    alt_print(f"\nModified files for {chosen_profile}:", config=config)
     for base, mods in codes.items():
         sort_mods(base, mods)
         make_base_edits(base, mods)
@@ -526,10 +528,10 @@ def main_action(config):
             config=config,
         )
         logging.getLogger("MainExceptions").exception(e)
-        alt_input("Press any key to see the error...", config=config)
+        alt_input("Press ENTER/RETURN to see the error...", config=config)
         raise RuntimeError("Encountered uncaught exception during program") from e
 
-    alt_input("Press any key to end program...", config=config)
+    alt_input("Press ENTER/RETURN to end program...", config=config)
 
 
 if __name__ == "__main__":
