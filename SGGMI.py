@@ -62,6 +62,7 @@ def lua_addimport(base, path):
 # Mod File Control #
 ####################
 
+DEFAULT_PRIORITY = 100
 
 def modfile_splitlines(body):
     glines = map(lambda s: s.strip().split('"'), body.split("\n"))
@@ -131,7 +132,7 @@ class Mod:
         self.mode = mode
         self.key = key
         self.id = index
-        self.load = {"priority": default_priority}
+        self.load = {"priority": DEFAULT_PRIORITY}
         self.load.update(load)
 
 
@@ -142,16 +143,10 @@ def modfile_startswith(tokens, keyword, n):
     return tokens[: len(keyword)] == keyword and len(tokens) >= len(keyword) + 1
 
 
-def modfile_loadcommand(reldir, tokens, to, n, mode, cfg={}, **load):
+def modfile_loadcommand(reldir, tokens, to, n, mode, todeploy, cfg={}, **load):
     for scopepath in to:
         path = PurePath.joinpath(config.scope_dir, scopepath)
-        if util.in_scope(
-            path,
-            config.local_dir,
-            config.base_cache_dir,
-            config.edit_cache_dir,
-            config.scope_dir,
-        ):
+        if util.in_scope(path,config):
             args = [tokens[i::n] for i in range(n)]
             for i in range(len(args[-1])):
                 sources = [
@@ -176,13 +171,7 @@ def modfile_loadcommand(reldir, tokens, to, n, mode, cfg={}, **load):
                         paths.append(tpath)
                         if num > len(tpath) or num < 0:
                             num = len(tpath)
-                    elif util.in_scope(
-                        PurePath.joinpath(config.mods_dir, source),
-                        config.local_dir,
-                        config.base_cache_dir,
-                        config.edit_cache_dir,
-                        config.scope_dir,
-                    ):
+                    elif util.in_scope(PurePath.joinpath(config.mods_dir, source), config):
                         paths.append(
                             PurePath.joinpath(config.mods_dir, source)
                             .resolve()
@@ -213,7 +202,7 @@ def modfile_loadcommand(reldir, tokens, to, n, mode, cfg={}, **load):
                         )
 
 
-def modfile_load(filename, config):
+def modfile_load(filename, todeploy, config):
     if util.is_subfile(filename, config.mods_dir).message == "SubDir":
         for entry in Path(filename).iterdir():
             modfile_load(entry, config)
@@ -228,8 +217,10 @@ def modfile_load(filename, config):
     if config.echo:
         alt_print(rel_name, config=config)
 
+    default_target = config.chosen_profile.default_target if config.chosen_profile else []
+
     reldir = rel_name.parent
-    p = default_priority
+    p = DEFAULT_PRIORITY
     to = default_target
     cfg = {}
 
@@ -253,11 +244,11 @@ def modfile_load(filename, config):
                         except ValueError:
                             pass
                     else:
-                        p = default_priority
+                        p = DEFAULT_PRIORITY
 
             if modfile_startswith(tokens, KWRD_include, 1):
                 for s in tokens[1:]:
-                    modfile_load(PurePath.joinpath(reldir, s.replace('"', "")), config)
+                    modfile_load(PurePath.joinpath(reldir, s.replace('"', "")), todeploy, config)
 
             elif modfile_startswith(tokens, KWRD_deploy, 1):
                 for token in tokens[1:]:
@@ -276,6 +267,7 @@ def modfile_load(filename, config):
                     to,
                     1,
                     "lua",
+                    todeploy,
                     cfg,
                     priority=p,
                 )
@@ -286,6 +278,7 @@ def modfile_load(filename, config):
                     to,
                     1,
                     "xml",
+                    todeploy,
                     cfg,
                     priority=p,
                 )
@@ -297,6 +290,7 @@ def modfile_load(filename, config):
                         to,
                         1,
                         "sjson",
+                        todeploy,
                         cfg,
                         priority=p,
                     )
@@ -485,7 +479,7 @@ def start(config):
 
     alt_print("\nReading mod files...", config=config)
     for mod in config.mods_dir.iterdir():
-        modfile_load(mod / config.mod_file, config)
+        modfile_load(mod / config.mod_file, todeploy, config)
 
     deploy_mods(todeploy,config)
 

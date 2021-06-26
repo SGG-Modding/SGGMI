@@ -59,7 +59,7 @@ class SggmiConfiguration:
 
         for key, value in kwargs:
             if hasattr(self, key):
-                object.__setattr__(self, key, value)
+                setattr(self, key, value)
 
     @property
     def scope_dir(self):
