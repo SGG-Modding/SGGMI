@@ -17,7 +17,7 @@ DEFAULT_PROFILES = {
 class SggmiConfiguration:
 
     def __init__(self, **kwargs):
-        self.this_file = Path(__file__).resolve()
+        self.this_file = Path(kwargs.pop("thisfile")).resolve()
 
         self.config_file = "config.json"
         self.mod_file = "modfile.txt"
@@ -59,11 +59,11 @@ class SggmiConfiguration:
 
         for key, value in kwargs:
             if hasattr(self, key):
-                self.key = value
+                object.__setattr__(self, key, value)
 
     @property
     def scope_dir(self):
-        game_dir = self.this_file.parent.parent.parent
+        game_dir = self.this_file.parent.parent
         return PurePath.joinpath(game_dir, self.scope_rel_path)
 
     @property

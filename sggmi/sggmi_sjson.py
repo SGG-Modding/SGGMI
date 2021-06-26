@@ -14,7 +14,7 @@ except Exception as e:
 from collections import OrderedDict
 import os
 
-import util
+from . import util
 
 KEYWORD = "SJSON"
 RESERVED = {

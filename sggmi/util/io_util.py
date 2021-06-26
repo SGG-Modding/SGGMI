@@ -1,6 +1,5 @@
 import warnings
 
-
 def alt_open(*args, **kwargs):
     return open(*args, encoding="utf-8-sig", **kwargs)
 
@@ -21,15 +20,18 @@ def alt_print(*args, **kwargs):
             data = temp_file.read()
 
         tlog.unlink()
-        return logging.getLogger(__name__).info(data)
+        return config.logger.info(data)
 
 
-def alt_warn(message):
-    warnings.warn(message, stacklevel=2)
+def alt_warn(message, **kwargs):
+    config = kwargs.pop("config")
+    
     if config.log and config.echo:
-        logging.getLogger(__name__).warning(message)
+        config.logger.warning(message)
+    else:
+        warnings.warn(message, stacklevel=2)
 
-    alt_print(message)
+    #alt_print(message, config=config)
 
 
 def alt_input(*args, **kwargs):
@@ -53,7 +55,7 @@ def alt_input(*args, **kwargs):
             data = temp_file.read()
 
         tlog.unlink()
-        return logging.getLogger(__name__).info(data)
+        return config.logger.info(data)
 
         if config.input:
             return input()
@@ -62,5 +64,5 @@ def alt_input(*args, **kwargs):
 
 
 def alt_exit(code=None, config=None):
-    alt_input("Press any key to end program...", config=config)
+    alt_input("Press ENTER/RETURN to end program...", config=config)
     exit(code)

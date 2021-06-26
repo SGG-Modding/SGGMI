@@ -1,5 +1,5 @@
 from pathlib import Path, PurePath
-
+from .io_util import alt_warn, alt_open
 
 class Signal:
     truth = False
@@ -31,7 +31,7 @@ def hash_file(file, out=None, modes=[], blocksize=65536):
     lines = []
     for mode in modes:
         hasher = hashlib.new(mode)
-        with open(file, "rb") as afile:
+        with alt_open(file, "rb") as afile:
             buf = afile.read(blocksize)
             while len(buf) > 0:
                 hasher.update(buf)
@@ -39,7 +39,7 @@ def hash_file(file, out=None, modes=[], blocksize=65536):
             lines.append(mode + "\t" + hasher.hexdigest())
     content = "\n".join(lines)
     if out:
-        with open(out, "w") as ofile:
+        with alt_open(out, "w") as ofile:
             ofile.write(content)
     return content
 
@@ -114,7 +114,7 @@ def in_source(filename, config, permit_DNE=False):
 def is_edited(base, config):
     edited_path = config.edit_cache_dir / f"{base}{config.edited_suffix}"
     if edited_path.is_file():
-        with open(edited_path, "r") as edited_file:
+        with alt_open(edited_path, "r") as edited_file:
             data = edited_file.read()
 
         return data == hash_file(PurePath.joinpath(config.scope_dir, base))
@@ -124,12 +124,12 @@ def is_edited(base, config):
 def check_scopes(config):
     game_scope = in_scope(config.scope_dir, config)
     if not game_scope.message == "DirInScope":
-        print(f"FAILED {config.scope_dir} is not in scope: {game_scope.message}")
+        alt_warn(f"FAILED {config.scope_dir} is not in scope: {game_scope.message}", config=config)
         return Signal(False, "GameNotInScope")
 
     deploy_scope = in_scope(config.deploy_dir, config)
     if not in_scope(config.deploy_dir, config, True).message == "DirInScope":
-        print(f"FAILED {config.scope_dir} is not in scope: {deploy_scope.message}")
+        alt_warn(f"FAILED {config.scope_dir} is not in scope: {deploy_scope.message}", config=config)
         return Signal(False, "DeployNotInScope")
 
     return Signal(True)

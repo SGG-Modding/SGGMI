@@ -39,6 +39,7 @@ from distutils.errors import DistutilsFileError
 from sggmi import (
     args_parser,
     util,
+    messages,
     sggmi_sjson,
     sggmi_xml,
 )
@@ -532,7 +533,8 @@ def main_action(config):
 
 
 if __name__ == "__main__":
-    config = SggmiConfiguration()
+    config = SggmiConfiguration( thisfile = __file__ )
+    config.logger = logging.getLogger(__name__)
 
     parser = args_parser.get_parser()
     parsed_args = parser.parse_args()
@@ -544,14 +546,14 @@ if __name__ == "__main__":
             alt_warn(
                 messages.game_has_no_scope(
                     config.scope_dir, config.scope_dir.parent, config.config_file
-                )
+                ), config=config
             )
 
         if scopes_okay.message == "DeployNotInScope":
             alt_warn(
                 messages.deploy_not_in_scope(
                     config.deploy_dir, config.scope_dir, config.config_file
-                )
+                ), config=config
             )
 
         alt_exit(1, config=config)
