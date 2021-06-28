@@ -1,10 +1,13 @@
-__all__ = [
-    "get_attribute",
-    "read",
-    "write",
-    "sjson_map",
-    "sjson_merge",
-]
+##__all__ = [
+##    "get_attribute",
+##    "read",
+##    "write",
+##    "sjson_map",
+##    "sjson_merge",
+##]
+
+#SJSON
+__all__ = ["sjson_merge"]
 
 try:
     import sjson

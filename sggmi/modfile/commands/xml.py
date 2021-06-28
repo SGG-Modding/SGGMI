@@ -1,10 +1,12 @@
-__all__ = [
-    "get",
-    "get",
-    "write",
-    "xml_map",
-    "merge",
-]
+##__all__ = [
+##    "get",
+##    "write",
+##    "xml_map",
+##    "merge",
+##]
+
+#XML
+__all__ = ["xml_merge"]
 
 ## XML Handling
 import xml.etree.ElementTree as xml
