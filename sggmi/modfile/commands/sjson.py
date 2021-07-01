@@ -163,7 +163,6 @@ else:
 @instance
 class SJSON(Command):
 
-    max = 1
     keywords = ("SJSON",)
 
     @instance()
@@ -174,6 +173,6 @@ class SJSON(Command):
 
     def run(self,tokens,info,**const):
         if sjson:
-            stdpayload(self,tokens,info,**const)
+            stdpayload(self,tokens,info,1,**const)
         else:
             alt_warn("SJSON module not found! Skipped command: " + line)

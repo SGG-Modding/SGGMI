@@ -6,10 +6,9 @@ from ..modfile import ModEdit
 def instance(*args,**kwargs):
     return lambda cls: cls(*args,**kwargs)
 
-def stdpayload(command, tokens, info, **const):
+def stdpayload(command, tokens, info, n=None, **const):
     config = const["config"]
     filemods = const["filemods"]
-    n = command.max
     for scopepath in info["target"]:
         path = PurePath.joinpath(config.scope_dir, scopepath)
         if util.in_scope(path,config):

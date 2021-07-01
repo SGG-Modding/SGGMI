@@ -67,5 +67,5 @@ class Replace(Command):
             pass
 
     def run(self,tokens,info,**const):
-        stdpayload(self,tokens,info,**const)
+        stdpayload(self,tokens,info,1,**const)
         

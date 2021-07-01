@@ -149,7 +149,6 @@ def merge(infile, mapfile):
 @instance()
 class XML(Command):
 
-    max = 1
     keywords = ("XML",)
 
     @instance()
@@ -159,4 +158,4 @@ class XML(Command):
             merge(target,source)
 
     def run(self,tokens,info,**const):
-        stdpayload(self,tokens,info,**const)
+        stdpayload(self,tokens,info,1,**const)
