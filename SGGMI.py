@@ -66,13 +66,13 @@ def deploy_mods(todeploy, config):
         )
 
 
-def sort_mods(base, mods, codes):
-    codes[base].sort(key=lambda x: x.load["priority"])
+def sort_mods(base, mods, filemods):
+    filemods[base].sort(key=lambda x: x.payload.order*x.priority)
     for i in range(len(mods)):
         mods[i].id = i
 
 
-def make_base_edits(base, payloads, config):
+def make_base_edits(base, mods, config):
     PurePath.joinpath(config.base_cache_dir, Path(base).parent).mkdir(
         parents=True, exist_ok=True
     )
@@ -86,14 +86,16 @@ def make_base_edits(base, payloads, config):
         alt_print(f"\n{base}", config=config)
 
     try:
-        for payload in payloads:
-            payload.act(
+        for mod in mods:
+            mod.payload.act(
                 PurePath.joinpath(config.scope_dir, base),
-                payload.targets,
+                mod.source,
+                *mod.args,
+                config=config
             )
             if config.echo:
                 k = i + 1
-                for s in payload.source.split("\n"):
+                for s in mod.source.split("\n"):
                     i += 1
                     alt_print(
                         f" #{i}"
@@ -173,7 +175,7 @@ def preplogfile(config):
 
 # Main Process
 def start(config):
-    codes = defaultdict(list)
+    filemods = defaultdict(list)
     todeploy = {}
 
     # remove anything in the base cache that is not in the edit cache
@@ -201,19 +203,19 @@ def start(config):
 
     alt_print("\nReading mod files...", config=config)
     for mod in config.mods_dir.iterdir():
-        modfile_load(mod / config.mod_file, todeploy, config)
+        modfile.load(mod / config.mod_file, filemods=filemods, todeploy=todeploy, config=config)
 
     deploy_mods(todeploy,config)
 
     chosen_profile = config.chosen_profile if config.chosen_profile else "empty profile"
 
     alt_print(f"\nModified files for {chosen_profile}:", config=config)
-    for base, mods in codes.items():
+    for base, mods in filemods.items():
         sort_mods(base, mods)
         make_base_edits(base, mods)
 
-    bs = len(codes)
-    ms = sum(map(len, codes.values()))
+    bs = len(filemods)
+    ms = sum(map(len, filemods.values()))
 
     alt_print(
         "\n"

@@ -1,12 +1,7 @@
-##__all__ = [
-##    "get",
-##    "write",
-##    "xml_map",
-##    "merge",
-##]
-
-#XML
 __all__ = ["xml_merge"]
+
+from command_helpers import instance, stdpayload
+from ..modfile import Command, Payload
 
 ## XML Handling
 import xml.etree.ElementTree as xml
@@ -148,3 +143,20 @@ def merge(infile, mapfile):
         mapdata = DNE
     indata = xml_map(indata, mapdata)
     write(infile, indata, start)
+
+
+#XML
+@instance()
+class XML(Command):
+
+    max = 1
+    keywords = ("XML",)
+
+    @instance()
+    class payload(Payload):
+
+        def act(target,source,*args,**kwargs):
+            merge(target,source)
+
+    def run(self,tokens,info,**const):
+        stdpayload(self,tokens,info,**const)
