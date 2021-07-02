@@ -1,10 +1,11 @@
-from command_helpers import instance, stdpayload
+from . import instance, stdpayload
 from ..modfile import load, Command, Payload
+from pathlib import Path, PurePath
 
-__all__ = ["Include","Load_Priority","To","Deploy","Replace"]
+__all__ = ["Include","LoadPriority","To","Deploy","Replace"]
 
 #Include
-@instance
+@instance()
 class Include(Command):
 
     keywords = ("Include",)
@@ -14,17 +15,17 @@ class Include(Command):
             load(PurePath.joinpath(const["reldir"], s.replace('"', "")), **const)
 
 #Load Priority
-@instance
-class Load_Priority(Command):
+@instance()
+class LoadPriority(Command):
 
     max = 1
     keywords = ("Load","Priority")
 
     def run(self,tokens,info,**const):
-        info["priority"] = int(tokens)
+        info["priority"] = float(tokens[0])
 
 #To
-@instance
+@instance()
 class To(Command):
 
     keywords = ("To",)
@@ -37,7 +38,7 @@ class To(Command):
             info["target"] = to
 
 #Deploy
-@instance
+@instance()
 class Deploy(Command):
 
     keywords = ("Deploy",)
@@ -53,7 +54,7 @@ class Deploy(Command):
                     todeploy[S] = util.merge_dict(todeploy.get(S), const["config"])
 
 #Replace
-@instance
+@instance()
 class Replace(Command):
 
     max = 1
@@ -62,7 +63,7 @@ class Replace(Command):
     @instance()
     class payload(Payload):
 
-        def act(target,source,*args,**kwargs):
+        def act(self,target,source,*args,**kwargs):
             ##TO BE IMPLEMENTED
             pass
 

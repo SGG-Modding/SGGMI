@@ -3,6 +3,7 @@
 __all__=["load","Command","Payload","ModEdit"]
 
 from collections import defaultdict
+from .. import util
 
 mlcom_start = "-:"
 mlcom_end = ":-"
@@ -17,14 +18,16 @@ class Command:
 
     min = 0
     max = None
-    keywords = (,)
+    keywords = ()
 
     @classmethod
     def mklookup(cls, commands, i=0):
         "make recursive lookup of commands by keywords"
-        layer = defaultdict([])
+        layer = defaultdict(list)
         for command in commands:
-            layer[command.keywords[i]].append(command)
+            if len(command.keywords)>i:
+                layer[command.keywords[i]].append(command)
+        i+=1
         lookup = {}
         for keyword, commands in layer.items():
             shallow = None
@@ -36,7 +39,7 @@ class Command:
                     raise RuntimeError(f"More than one command defined for the same keywords: {shallow.keywords}")
                 else:
                     shallow = command
-            lookup[keyword] = (shallow,cls.mklookup(deep,i+1))
+            lookup[keyword] = (shallow,cls.mklookup(tuple(deep),i))
         return lookup
 
     def run(self,tokens,info,**const):
@@ -142,12 +145,12 @@ def load(filename, info=None, **const):
 
     rel_name = filename.relative_to(config.mods_dir)
     try:
-        file = alt_open(filename, "r")
+        file = util.alt_open(filename, "r")
     except IOError:
         return
 
     if config.echo:
-        alt_print(rel_name, config=config)
+        util.alt_print(rel_name, config=config)
 
     reldir = rel_name.parent
     
@@ -155,11 +158,10 @@ def load(filename, info=None, **const):
         for line in splitlines(file.read()):
             tokens = tokenise(line)
             commands = const["commands"]
-            
+            command = None
             while commands and len(tokens) > 0:
-                command, commands = commands[tokens[0]]
+                command, commands = commands[tokens.pop(0)]                
                 if checkcommand(tokens, command):
-                    tokens.pop(0)
-                    command.run(tokens,info,**const)
+                    command.run(tokens,info,reldir=reldir,**const)
                     break
     

@@ -1,6 +1,6 @@
-__all__ = ["xml_merge"]
+__all__ = ["XML"]
 
-from command_helpers import instance, stdpayload
+from . import instance, stdpayload
 from ..modfile import Command, Payload
 
 ## XML Handling
@@ -154,7 +154,7 @@ class XML(Command):
     @instance()
     class payload(Payload):
 
-        def act(target,source,*args,**kwargs):
+        def act(self,target,source,*args,**kwargs):
             merge(target,source)
 
     def run(self,tokens,info,**const):

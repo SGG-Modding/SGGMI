@@ -1,9 +1,9 @@
 __all__ = ["SJSON"]
 
-from command_helpers import instance, stdpayload
+from . import instance, stdpayload
 from ..modfile import Command, Payload
 
-import ..util
+from ... import util
 
 try:
     import sjson
@@ -160,7 +160,7 @@ else:
             write_file(base_file, merged_data)
 
 #SJSON
-@instance
+@instance()
 class SJSON(Command):
 
     keywords = ("SJSON",)
@@ -168,7 +168,7 @@ class SJSON(Command):
     @instance()
     class payload(Payload):
 
-        def act(target,source,*args,**kwargs):
+        def act(self,target,source,*args,**kwargs):
             merge_files(target,source)
 
     def run(self,tokens,info,**const):

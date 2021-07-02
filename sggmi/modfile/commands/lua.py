@@ -1,7 +1,7 @@
-from command_helpers import instance, stdpayload
+from . import instance, stdpayload
 from ..modfile import Command, Payload
 
-__all__ = ["Import","Top_Import"]
+__all__ = ["Import","TopImport"]
 
 ## LUA import statement adding
 def addimport(base, path):
@@ -9,7 +9,7 @@ def addimport(base, path):
         basefile.write(f"\nImport {path}")
 
 #Import
-@instance
+@instance()
 class Import(Command):
 
     keywords = ("Import",)
@@ -17,15 +17,15 @@ class Import(Command):
     @instance()
     class payload(Payload):
 
-        def act(target,source,*args,**kwargs):
+        def act(self,target,source,*args,**kwargs):
             addimport(target,source)
 
     def run(self,tokens,info,**const):
         stdpayload(self,tokens,info,1,**const)
 
 #Top Import
-@instance
-class Top_Import(Command):
+@instance()
+class TopImport(Command):
 
     keywords = ("Top","Import")
 
@@ -34,7 +34,7 @@ class Top_Import(Command):
 
         order = -1
         
-        def act(target,source,*args,**kwargs):
+        def act(self,target,source,*args,**kwargs):
             ##TO BE IMPLEMENTED
             pass
 

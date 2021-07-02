@@ -20,7 +20,7 @@ __all__ = [
     "json",
     "hashlib",
 ]
-__version__ = "1.0a-r4"
+__version__ = "1.0a-r5"
 __author__ = "Andre Issa"
 
 # Dependencies
@@ -66,8 +66,8 @@ def deploy_mods(todeploy, config):
         )
 
 
-def sort_mods(base, mods, filemods):
-    filemods[base].sort(key=lambda x: x.payload.order*x.priority)
+def sort_mods(mods):
+    mods.sort(key=lambda x: x.payload.order*x.priority)
     for i in range(len(mods)):
         mods[i].id = i
 
@@ -211,8 +211,8 @@ def start(config):
 
     alt_print(f"\nModified files for {chosen_profile}:", config=config)
     for base, mods in filemods.items():
-        sort_mods(base, mods)
-        make_base_edits(base, mods)
+        sort_mods(mods)
+        make_base_edits(base, mods, config)
 
     bs = len(filemods)
     ms = sum(map(len, filemods.values()))
