@@ -20,7 +20,7 @@ __all__ = [
     "json",
     "hashlib",
 ]
-__version__ = "1.0a-r4"
+__version__ = "1.0a-r5"
 __author__ = "Andre Issa"
 
 # Dependencies
@@ -40,8 +40,7 @@ from sggmi import (
     args_parser,
     util,
     messages,
-    sggmi_sjson,
-    sggmi_xml,
+    modfile,
 )
 from sggmi.config import SggmiConfiguration
 from sggmi.util import (
@@ -51,253 +50,6 @@ from sggmi.util import (
     alt_print,
     alt_warn,
 )
-
-## LUA import statement adding
-def lua_addimport(base, path):
-    with open(base, "a") as basefile:
-        basefile.write(f"\nImport {path}")
-
-
-####################
-# Mod File Control #
-####################
-
-DEFAULT_PRIORITY = 100
-
-def modfile_splitlines(body):
-    glines = map(lambda s: s.strip().split('"'), body.split("\n"))
-    lines = []
-    li = -1
-    mlcom = False
-
-    def gp(group, lines, li, mlcom, even):
-        if mlcom:
-            tgroup = group.split(modfile_mlcom_end, 1)
-            if len(tgroup) == 1:  # still commented, carry on
-                even = not even
-                return (lines, li, mlcom, even)
-            else:  # comment ends, if a quote, even is disrupted
-                even = False
-                mlcom = False
-                group = tgroup[1]
-        if even:
-            lines[li] += '"' + group + '"'
-        else:
-            tgroup = group.split(modfile_comment, 1)
-            tline = tgroup[0].split(modfile_mlcom_start, 1)
-            tgroup = tline[0].split(modfile_linebreak)
-            lines[li] += tgroup[0]  # uncommented line
-            for g in tgroup[1:]:  # new uncommented lines
-                lines.append(g)
-                li += 1
-            if len(tline) > 1:  # comment begins
-                mlcom = True
-                lines, li, mlcom, even = gp(tline[1], lines, li, mlcom, even)
-        return (lines, li, mlcom, even)
-
-    for groups in glines:
-        even = False
-        li += 1
-        lines.append("")
-        for group in groups:
-            lines, li, mlcom, even = gp(group, lines, li, mlcom, even)
-            even = not even
-    return lines
-
-
-def modfile_tokenise(line):
-    groups = line.strip().split('"')
-    for i, group in enumerate(groups):
-        if i % 2:
-            groups[i] = [group]
-        else:
-            groups[i] = group.replace(" ", modfile_delimiter)
-            groups[i] = groups[i].split(modfile_delimiter)
-    tokens = []
-    for group in groups:
-        for x in group:
-            if x != "":
-                tokens.append(x)
-    return tokens
-
-
-class Mod:
-    """ modcode data structure """
-
-    mode = ""
-
-    def __init__(self, src, data, mode, key, index, **load):
-        self.src = src
-        self.data = data
-        self.mode = mode
-        self.key = key
-        self.id = index
-        self.load = {"priority": DEFAULT_PRIORITY}
-        self.load.update(load)
-
-
-# FILE/MOD LOADING
-
-
-def modfile_startswith(tokens, keyword, n):
-    return tokens[: len(keyword)] == keyword and len(tokens) >= len(keyword) + 1
-
-
-def modfile_loadcommand(reldir, tokens, to, n, mode, todeploy, cfg={}, **load):
-    for scopepath in to:
-        path = PurePath.joinpath(config.scope_dir, scopepath)
-        if util.in_scope(path,config):
-            args = [tokens[i::n] for i in range(n)]
-            for i in range(len(args[-1])):
-                sources = [
-                    PurePath.joinpath(reldir, arg[i].replace('"', "")) for arg in args
-                ]
-                paths = []
-                num = -1
-                for source in sources:
-                    if PurePath.joinpath(config.mods_dir, source).is_dir():
-                        tpath = []
-                        for entry in PurePath.joinpath(
-                            config.mods_dir, source
-                        ).iterdir():
-                            if util.in_scope(
-                                entry,
-                                config.local_dir,
-                                config.base_cache_dir,
-                                config.edit_cache_dir,
-                                config.scope_dir,
-                            ):
-                                tpath.append(entry.as_posix())
-                        paths.append(tpath)
-                        if num > len(tpath) or num < 0:
-                            num = len(tpath)
-                    elif util.in_scope(PurePath.joinpath(config.mods_dir, source), config):
-                        paths.append(
-                            PurePath.joinpath(config.mods_dir, source)
-                            .resolve()
-                            .as_posix()
-                        )
-                if paths:
-                    for j in range(abs(num)):
-                        sources = [x[j] if isinstance(x, list) else x for x in paths]
-                        for src in sources:
-                            todeploy[src] = util.merge_dict(todeploy.get(src), cfg)
-                        f = lambda x: map(
-                            lambda y: PurePath.joinpath(config.deploy_rel_dir, y), x
-                        )
-                        codes[scopepath].append(
-                            Mod(
-                                "\n".join(
-                                    [
-                                        Path(source).resolve().as_posix()
-                                        for source in sources
-                                    ]
-                                ),
-                                tuple(f(sources)),
-                                mode,
-                                scopepath,
-                                len(codes[scopepath]),
-                                **load,
-                            )
-                        )
-
-
-def modfile_load(filename, todeploy, config):
-    if util.is_subfile(filename, config.mods_dir).message == "SubDir":
-        for entry in Path(filename).iterdir():
-            modfile_load(entry, config)
-        return
-
-    rel_name = filename.relative_to(config.mods_dir)
-    try:
-        file = alt_open(filename, "r")
-    except IOError:
-        return
-
-    if config.echo:
-        alt_print(rel_name, config=config)
-
-    default_target = config.chosen_profile.default_target if config.chosen_profile else []
-
-    reldir = rel_name.parent
-    p = DEFAULT_PRIORITY
-    to = default_target
-    cfg = {}
-
-    with file:
-        for line in modfile_splitlines(file.read()):
-            tokens = modfile_tokenise(line)
-            if len(tokens) == 0:
-                continue
-
-            elif modfile_startswith(tokens, KWRD_to, 0):
-                to = [Path(s).as_posix() for s in tokens[1:]]
-                if len(to) == 0:
-                    to = default_target
-
-            elif modfile_startswith(tokens, KWRD_load, 0):
-                n = len(KWRD_load) + len(KWRD_priority)
-                if tokens[len(KWRD_load) : n] == KWRD_priority:
-                    if len(tokens) > n:
-                        try:
-                            p = int(tokens[n])
-                        except ValueError:
-                            pass
-                    else:
-                        p = DEFAULT_PRIORITY
-
-            if modfile_startswith(tokens, KWRD_include, 1):
-                for s in tokens[1:]:
-                    modfile_load(PurePath.joinpath(reldir, s.replace('"', "")), todeploy, config)
-
-            elif modfile_startswith(tokens, KWRD_deploy, 1):
-                for token in tokens[1:]:
-                    check = util.is_subfile(s, modsdir)
-                    if check:
-                        todeploy[s] = util.merge_dict(todeploy.get(s), cfg)
-                    elif check.message == "SubDir":
-                        for entry in Path(s).iterdir():
-                            S = entry.resolve().as_posix()
-                            todeploy[S] = util.merge_dict(todeploy.get(S), cfg)
-
-            elif modfile_startswith(tokens, KWRD_import, 1):
-                modfile_loadcommand(
-                    reldir,
-                    tokens[len(KWRD_import) :],
-                    to,
-                    1,
-                    "lua",
-                    todeploy,
-                    cfg,
-                    priority=p,
-                )
-            elif modfile_startswith(tokens, sggmi_xml.KEYWORD, 1):
-                modfile_loadcommand(
-                    reldir,
-                    tokens[len(sggmi_xml.KEYWORD) :],
-                    to,
-                    1,
-                    "xml",
-                    todeploy,
-                    cfg,
-                    priority=p,
-                )
-            elif modfile_startswith(tokens, sggmi_sjson.KEYWORD, 1):
-                if sjson:
-                    modfile_loadcommand(
-                        reldir,
-                        tokens[len(sggmi_sjson.KEYWORD) :],
-                        to,
-                        1,
-                        "sjson",
-                        todeploy,
-                        cfg,
-                        priority=p,
-                    )
-
-                else:
-                    alt_warn("SJSON module not found! Skipped command: " + line)
-
 
 def deploy_mods(todeploy, config):
     for file_path in todeploy.keys():
@@ -314,8 +66,8 @@ def deploy_mods(todeploy, config):
         )
 
 
-def sort_mods(base, mods, codes):
-    codes[base].sort(key=lambda x: x.load["priority"])
+def sort_mods(mods):
+    mods.sort(key=lambda x: x.payload.order*x.priority)
     for i in range(len(mods)):
         mods[i].id = i
 
@@ -335,24 +87,15 @@ def make_base_edits(base, mods, config):
 
     try:
         for mod in mods:
-            if mod.mode == "lua":
-                lua_addimport(
-                    PurePath.joinpath(config.scope_dir, base),
-                    mod.data[0],
-                )
-            elif mod.mode == "xml":
-                sggmi_xml.merge(
-                    PurePath.joinpath(config.scope_dir, base),
-                    mod.data[0],
-                )
-            elif mod.mode == "sjson":
-                sggmi_sjson.merge_files(
-                    PurePath.joinpath(config.scope_dir, base),
-                    mod.data[0],
-                )
+            mod.payload.act(
+                PurePath.joinpath(config.scope_dir, base),
+                mod.source,
+                *mod.args,
+                config=config
+            )
             if config.echo:
                 k = i + 1
-                for s in mod.src.split("\n"):
+                for s in mod.source.split("\n"):
                     i += 1
                     alt_print(
                         f" #{i}"
@@ -416,10 +159,6 @@ def restorebase(config):
         except DistutilsFileError:
             pass
 
-
-# Global Preprocessing
-
-
 def thetime():
     return datetime.now().strftime("%d.%m.%Y-%I.%M%p-%S.%f")
 
@@ -434,24 +173,9 @@ def preplogfile(config):
         )
     logging.captureWarnings(config.log and not config.echo)
 
-
-modfile_mlcom_start = "-:"
-modfile_mlcom_end = ":-"
-modfile_comment = "::"
-modfile_linebreak = ";"
-modfile_delimiter = ","
-
-KWRD_to = ["To"]
-KWRD_load = ["Load"]
-KWRD_priority = ["Priority"]
-KWRD_include = ["Include"]
-KWRD_deploy = ["Deploy"]
-KWRD_import = ["Import"]
-
-
 # Main Process
 def start(config):
-    codes = defaultdict(list)
+    filemods = defaultdict(list)
     todeploy = {}
 
     # remove anything in the base cache that is not in the edit cache
@@ -479,19 +203,19 @@ def start(config):
 
     alt_print("\nReading mod files...", config=config)
     for mod in config.mods_dir.iterdir():
-        modfile_load(mod / config.mod_file, todeploy, config)
+        modfile.load(mod / config.mod_file, filemods=filemods, todeploy=todeploy, config=config)
 
     deploy_mods(todeploy,config)
 
     chosen_profile = config.chosen_profile if config.chosen_profile else "empty profile"
 
     alt_print(f"\nModified files for {chosen_profile}:", config=config)
-    for base, mods in codes.items():
-        sort_mods(base, mods)
-        make_base_edits(base, mods)
+    for base, mods in filemods.items():
+        sort_mods(mods)
+        make_base_edits(base, mods, config)
 
-    bs = len(codes)
-    ms = sum(map(len, codes.values()))
+    bs = len(filemods)
+    ms = sum(map(len, filemods.values()))
 
     alt_print(
         "\n"
