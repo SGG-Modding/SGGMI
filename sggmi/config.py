@@ -28,7 +28,8 @@ class SggmiConfiguration:
         self.echo = True
         self.log = True
         self.input = True
-
+        
+        self.uninstall = False
         self.modify_config = False
         self.overwrite_config = False
 

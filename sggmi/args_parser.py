@@ -31,7 +31,13 @@ def get_parser():
         help="Disable input (will use default values)",
         default=True,
     )
-
+    parser.add_argument(
+        "-u",
+        "--uninstall",
+        action="store_true",
+        dest="uninstall",
+        help="Uninstall/clean mods and halt",
+    )
     parser.add_argument(
         "-m",
         "--modify",
