@@ -1,23 +1,26 @@
 # FILE/MOD LOADING
 
-__all__=["load","Command","Payload","ModEdit"]
+__all__ = ["load_mod", "Command", "Payload", "ModEdit"]
 
 from collections import defaultdict
-from .. import util
+from dataclasses import dataclass
+from pathlib import Path
+from sggmi import util
+from sggmi.util.io_util import alt_print
+from typing import Any, Mapping, Tuple
+import re
 
-mlcom_start = "-:"
-mlcom_end = ":-"
-comment = "::"
-linebreak = ";"
-delimiter = ","
+LINE_BREAK = ";"
+DELIMITER = ","
 
 DEFAULT_PRIORITY = 100
 
-class Command:
-    """ modfile commands """
 
-    min = 0
-    max = None
+class Command:
+    """modfile commands"""
+
+    min_tokens = 0
+    max_tokens = 999
     keywords = ()
 
     @classmethod
@@ -25,39 +28,46 @@ class Command:
         "make recursive lookup of commands by keywords"
         layer = defaultdict(list)
         for command in commands:
-            if len(command.keywords)>i:
+            if len(command.keywords) > i:
                 layer[command.keywords[i]].append(command)
-        i+=1
+        i += 1
         lookup = {}
         for keyword, commands in layer.items():
             shallow = None
             deep = []
             for command in commands:
-                if len(command.keywords)>i:
+                if len(command.keywords) > i:
                     deep.append(command)
                 elif shallow is not None:
-                    raise RuntimeError(f"More than one command defined for the same keywords: {shallow.keywords}")
+                    raise RuntimeError(
+                        f"More than one command defined for the same keywords: {shallow.keywords}"
+                    )
                 else:
                     shallow = command
-            lookup[keyword] = (shallow,cls.mklookup(tuple(deep),i))
+            lookup[keyword] = (shallow, cls.mklookup(tuple(deep), i))
         return lookup
 
-    def run(self,tokens,info,**const):
+    def run(self, tokens, info, rel_dir, **kwargs):
         pass
+
+    def valid_tokens(self, tokens: list[str]) -> bool:
+        """Check whether tokens match the amount valid for command"""
+        return self.min_tokens <= len(tokens) <= self.max_tokens
+
 
 class Payload:
-    """ mod edit payload mode """
+    """mod edit payload mode"""
 
     order = 1
-    def act(target,source,*args,**kwargs):
+
+    def act(target, source, *args, **kwargs):
         pass
 
-from dataclasses import dataclass
-from typing import Tuple
 
 @dataclass
 class ModEdit:
-    """ mod edit data """
+    """mod edit data"""
+
     source: str
     args: Tuple[str]
     payload: Payload
@@ -65,103 +75,98 @@ class ModEdit:
     key: str
     index: int
 
-def splitlines(body):
-    glines = map(lambda s: s.strip().split('"'), body.split("\n"))
-    lines = []
-    li = -1
-    mlcom = False
 
-    def gp(group, lines, li, mlcom, even):
-        if mlcom:
-            tgroup = group.split(mlcom_end, 1)
-            if len(tgroup) == 1:  # still commented, carry on
-                even = not even
-                return (lines, li, mlcom, even)
-            else:  # comment ends, if a quote, even is disrupted
-                even = False
-                mlcom = False
-                group = tgroup[1]
-        if even:
-            lines[li] += '"' + group + '"'
-        else:
-            tgroup = group.split(comment, 1)
-            tline = tgroup[0].split(mlcom_start, 1)
-            tgroup = tline[0].split(linebreak)
-            lines[li] += tgroup[0]  # uncommented line
-            for g in tgroup[1:]:  # new uncommented lines
-                lines.append(g)
-                li += 1
-            if len(tline) > 1:  # comment begins
-                mlcom = True
-                lines, li, mlcom, even = gp(tline[1], lines, li, mlcom, even)
-        return (lines, li, mlcom, even)
+def parse_modfile(data: str) -> list[str]:
+    """Split modfile data into a list of lines with comments and
+    whitespace removed"""
 
-    for groups in glines:
-        even = False
-        li += 1
-        lines.append("")
-        for group in groups:
-            lines, li, mlcom, even = gp(group, lines, li, mlcom, even)
-            even = not even
-    return lines
+    def remove_comments(segment: str) -> str:
+        """
+        Relies on caching to handle regex compiling. If performance suffers,
+        convert to `re.compile` passed into the function, or in-line
+        """
+        segment = re.sub(r"-:.*:-", "", segment, flags=re.S)
+        segment = re.sub(r"::.*", "", segment)
 
+        return segment
 
-def tokenise(line):
-    groups = line.strip().split('"')
-    for i, group in enumerate(groups):
-        if i % 2:
-            groups[i] = [group]
-        else:
-            groups[i] = group.replace(" ", delimiter)
-            groups[i] = groups[i].split(delimiter)
-    tokens = []
-    for group in groups:
-        for x in group:
-            if x != "":
-                tokens.append(x)
-    return tokens
+    cleaned_modfile = []
+    for idx, group in enumerate(data.split('"')):
+        if idx % 2:  # We're inside quotes, remove newlines
+            cleaned_modfile.append(group.replace("\n", ""))
+        else:  # We're outside quotes, remove comments
+            cleaned_modfile.append(remove_comments(group))
+
+    cleaned_modfile = "".join(cleaned_modfile)
+
+    # Split modfile lines into a list after replacing LINE_BREAK with \n
+    modfile_lines = [
+        line.strip()
+        for line in cleaned_modfile.replace(LINE_BREAK, "\n").splitlines()
+        if line.strip() != ""
+    ]
+
+    # simplify delimiters, then split
+    return [
+        [
+            token.strip()
+            for token in re.sub(f'[" "|{DELIMITER}]+', " ", line).split(" ")
+            if token.strip() != ""
+        ]
+        for line in modfile_lines
+    ]
 
 
-def checkcommand(tokens, command):
-    if command is not None:
-        n = len(tokens)-1
-        if command.min <= n and (command.max is None or n<=command.max):
-            return True
-    return False
+def load_mod(
+    modfile_path: Path,
+    info: Mapping[str, Any] = None,
+    **kwargs: Mapping[str, Any],
+):
+    """Run modfile specified by modfile_path. If it's a directory, recurse."""
+    config = kwargs["config"]
 
-
-def load(filename, info=None, **const):
-    config = const["config"]
-    
-    if util.is_subfile(filename, config.mods_dir).message == "SubDir":
-        for entry in Path(filename).iterdir():
-            load(entry, **const)
+    if util.is_subfile(modfile_path, config.mods_dir).message == "SubDir":
+        for entry in Path(modfile_path).iterdir():
+            load_mod(entry, **kwargs)
         return
 
     if info is None:
         info = {}
-        info.setdefault("priority",DEFAULT_PRIORITY)
-        info.setdefault("target",config.chosen_profile.default_target if config.chosen_profile else [])
 
-    rel_name = filename.relative_to(config.mods_dir)
-    try:
-        file = util.alt_open(filename, "r")
-    except IOError:
-        return
+    info.setdefault("priority", DEFAULT_PRIORITY)
+    info.setdefault(
+        "target", config.chosen_profile.default_target if config.chosen_profile else []
+    )
 
+    rel_name = modfile_path.relative_to(config.mods_dir)
     if config.echo:
         util.alt_print(rel_name, config=config)
 
-    reldir = rel_name.parent
-    
-    with file:
-        for line in splitlines(file.read()):
-            tokens = tokenise(line)
-            commands = const["commands"]
-            command = None
-            while commands and len(tokens) > 0:
-                command, commands = commands[tokens.pop(0)]                
-                if checkcommand(tokens, command):
-                    command.run(tokens,info,reldir=reldir,**const)
-                    break
-    
+    rel_dir = rel_name.parent
+    try:
+        execute_modfile(modfile_path, info, rel_dir, **kwargs)
+    except IOError:
+        return
+
+
+def execute_modfile(modfile_path, info, rel_dir, **kwargs):
+    """Open modfile, parse contents, and execute commands"""
+    with util.alt_open(modfile_path, "r") as modfile:
+        lines_of_tokens = parse_modfile(modfile.read())
+        commands = kwargs["commands"]
+        if not commands:
+            return
+
+        for tokens in lines_of_tokens:
+            try:
+                command = commands[tokens[0]]
+            except KeyError:
+                alt_print(f"Failed to find command: {tokens[0]}")
+                continue
+
+            if not command.valid_tokens(tokens[1:]):
+                alt_print(f"{command}: Invalid amount of tokens ({tokens})")
+                continue
+
+            command.run(tokens[1:], info, rel_dir=rel_dir, **kwargs)
+            break
