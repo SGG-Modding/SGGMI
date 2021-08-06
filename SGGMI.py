@@ -200,11 +200,6 @@ def start(config):
         alt_print("Finished uninstalling mod edits.", config=config)
         alt_exit(0, config=config)
 
-    config.edit_cache_dir.mkdir(parents=True, exist_ok=True)
-    config.base_cache_dir.mkdir(parents=True, exist_ok=True)
-    config.mods_dir.mkdir(parents=True, exist_ok=True)
-    config.deploy_dir.mkdir(parents=True, exist_ok=True)
-
     alt_print("\nReading mod files...", config=config)
     for mod in config.mods_dir.iterdir():
         modfile.load(mod / config.mod_file, filemods=filemods, todeploy=todeploy, config=config)
@@ -264,7 +259,11 @@ if __name__ == "__main__":
     parsed_args = parser.parse_args()
     config.apply_command_line_arguments(parsed_args)
 
-    print( { x:y for x,y in config.__dict__.items() if x[0] != '_' } )
+    # Initialize directories if they don't exist
+    config.edit_cache_dir.mkdir(parents=True, exist_ok=True)
+    config.base_cache_dir.mkdir(parents=True, exist_ok=True)
+    config.mods_dir.mkdir(parents=True, exist_ok=True)
+    config.deploy_dir.mkdir(parents=True, exist_ok=True)
 
     scopes_okay = util.check_scopes(config)
     if not scopes_okay:
