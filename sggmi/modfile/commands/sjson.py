@@ -1,14 +1,12 @@
 __all__ = ["SJSON"]
 
-from . import instance, stdpayload
-from ..modfile import Command, Payload
-
+from . import instance, generate_mod_edit, Command, Payload
 from ... import util
 
 try:
     import sjson
 except Exception as e:
-    util.alt_print("Could not import sjson, skipping sjson edits.")
+    print("Could not import sjson, skipping sjson edits.")
 else:
     from collections import OrderedDict
     import os
@@ -28,7 +26,9 @@ else:
         except sjson.ParseException as e:
             alt_print(e, config=config)
         except FileNotFoundError:
-            alt_print(f"sggmi_sjson (read_file): {filename} does not exist!", config=config)
+            alt_print(
+                f"sggmi_sjson (read_file): {filename} does not exist!", config=config
+            )
         except Exception as e:
             alt_print(e, config=config)
 
@@ -40,7 +40,9 @@ else:
             return
 
         if not Path(filename).is_file():
-            alt_print(f"sggmi_sjson (write_file): {filename} is not a file!", config=config)
+            alt_print(
+                f"sggmi_sjson (write_file): {filename} is not a file!", config=config
+            )
             return
 
         if isinstance(content, OrderedDict):
@@ -54,7 +56,9 @@ else:
         # Indentation styling
         prev_char = ""
         for char in curr_string:
-            if (char in "{[" and prev_char in "{[") or (char in "}]" and prev_char in "}]"):
+            if (char in "{[" and prev_char in "{[") or (
+                char in "}]" and prev_char in "}]"
+            ):
                 output += "\n"
 
             output += char
@@ -86,7 +90,6 @@ else:
                 file_out.write(final_output)
         except Exception as e:
             alt_print(f"sggmi_sjson (write_file): \n{e}", config=config)
-
 
     def merge_data(base_data, input_data):
         if not input_data:
@@ -145,7 +148,6 @@ else:
 
         return input_data
 
-
     def merge_files(base_file, input_file, overwrite_base=True):
         if not input_file:
             return base_file
@@ -159,7 +161,8 @@ else:
         if overwrite_base:
             write_file(base_file, merged_data)
 
-#SJSON
+
+# SJSON
 @instance()
 class SJSON(Command):
 
@@ -167,12 +170,11 @@ class SJSON(Command):
 
     @instance()
     class payload(Payload):
+        def act(self, target, source, *args, **kwargs):
+            merge_files(target, source)
 
-        def act(self,target,source,*args,**kwargs):
-            merge_files(target,source)
-
-    def run(self,tokens,info,**const):
+    def run(self, tokens, modfile_state, **const):
         if sjson:
-            stdpayload(self,tokens,info,1,**const)
+            generate_mod_edit(self, tokens, modfile_state, **const)
         else:
             alt_warn("SJSON module not found! Skipped command: " + line)

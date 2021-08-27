@@ -51,8 +51,9 @@ from sggmi.util import (
     alt_warn,
 )
 
-def deploy_mods(todeploy, config):
-    for file_path in todeploy.keys():
+
+def deploy_mods(to_deploy, config):
+    for file_path in to_deploy.keys():
         PurePath.joinpath(
             config.deploy_dir,
             Path(file_path).resolve().parent.relative_to(config.mods_dir),
@@ -67,12 +68,12 @@ def deploy_mods(todeploy, config):
 
 
 def sort_mods(mods):
-    mods.sort(key=lambda x: x.payload.order*x.priority)
+    mods.sort(key=lambda x: x.payload.order * x.priority)
     for i in range(len(mods)):
         mods[i].id = i
 
 
-def make_base_edits(base, mods, config):
+def make_base_edits(base, mod_edits, config):
     PurePath.joinpath(config.base_cache_dir, Path(base).parent).mkdir(
         parents=True, exist_ok=True
     )
@@ -86,16 +87,16 @@ def make_base_edits(base, mods, config):
         alt_print(f"\n{base}", config=config)
 
     try:
-        for mod in mods:
-            mod.payload.act(
+        for mod_edit in mod_edits:
+            target_path = Path(base).resolve().parent
+            mod_edit.payload.act(
                 PurePath.joinpath(config.scope_dir, base),
-                mod.source,
-                *mod.args,
-                config=config
+                os.path.relpath(Path(mod_edit.deploy_path), target_path),
+                config=config,
             )
             if config.echo:
                 k = i + 1
-                for s in mod.source.split("\n"):
+                for s in mod_edit.source.split("\n"):
                     i += 1
                     alt_print(
                         f" #{i}"
@@ -159,6 +160,7 @@ def restorebase(config):
         except DistutilsFileError:
             pass
 
+
 def thetime():
     return datetime.now().strftime("%d.%m.%Y-%I.%M%p-%S.%f")
 
@@ -173,10 +175,11 @@ def preplogfile(config):
         )
     logging.captureWarnings(config.log and not config.echo)
 
+
 # Main Process
 def start(config):
-    filemods = defaultdict(list)
-    todeploy = {}
+    file_mods = defaultdict(list)
+    to_deploy = {}
 
     # remove anything in the base cache that is not in the edit cache
     alt_print(
@@ -202,19 +205,24 @@ def start(config):
 
     alt_print("\nReading mod files...", config=config)
     for mod in config.mods_dir.iterdir():
-        modfile.load(mod / config.mod_file, filemods=filemods, todeploy=todeploy, config=config)
+        modfile.modfile.load_mod(
+            mod / config.mod_file,
+            file_mods=file_mods,
+            to_deploy=to_deploy,
+            config=config,
+        )
 
-    deploy_mods(todeploy,config)
+    deploy_mods(to_deploy, config)
 
     chosen_profile = config.chosen_profile if config.chosen_profile else "empty profile"
 
     alt_print(f"\nModified files for {chosen_profile}:", config=config)
-    for base, mods in filemods.items():
+    for base, mods in file_mods.items():
         sort_mods(mods)
         make_base_edits(base, mods, config)
 
-    bs = len(filemods)
-    ms = sum(map(len, filemods.values()))
+    bs = len(file_mods)
+    ms = sum(map(len, file_mods.values()))
 
     alt_print(
         "\n"
@@ -252,7 +260,11 @@ def main_action(config):
 
 
 if __name__ == "__main__":
-    config = SggmiConfiguration( thisfile = __file__ )
+    config = SggmiConfiguration(thisfile=__file__)
+    config.detect_profile()
+    if not config.profile:
+        config.set_profile()
+
     config.logger = logging.getLogger(__name__)
 
     parser = args_parser.get_parser()
@@ -271,14 +283,16 @@ if __name__ == "__main__":
             alt_warn(
                 messages.game_has_no_scope(
                     config.scope_dir, config.scope_dir.parent, config.config_file
-                ), config=config
+                ),
+                config=config,
             )
 
         if scopes_okay.message == "DeployNotInScope":
             alt_warn(
                 messages.deploy_not_in_scope(
                     config.deploy_dir, config.scope_dir, config.config_file
-                ), config=config
+                ),
+                config=config,
             )
 
         alt_exit(1, config=config)

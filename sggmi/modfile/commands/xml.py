@@ -1,7 +1,6 @@
 __all__ = ["XML"]
 
-from . import instance, stdpayload
-from ..modfile import Command, Payload
+from . import instance, generate_mod_edit, Command, Payload
 
 ## XML Handling
 import xml.etree.ElementTree as xml
@@ -12,6 +11,7 @@ RESERVED = {
 }
 
 KEYWORD = "XML"
+
 
 def get(data, key):
     if isinstance(data, list):
@@ -145,7 +145,7 @@ def merge(infile, mapfile):
     write(infile, indata, start)
 
 
-#XML
+# XML
 @instance()
 class XML(Command):
 
@@ -153,9 +153,8 @@ class XML(Command):
 
     @instance()
     class payload(Payload):
+        def act(self, target, source, *args, **kwargs):
+            merge(target, source)
 
-        def act(self,target,source,*args,**kwargs):
-            merge(target,source)
-
-    def run(self,tokens,info,**const):
-        stdpayload(self,tokens,info,1,**const)
+    def run(self, tokens, modfile_state, **const):
+        generate_mod_edit(self, tokens, modfile_state, **const)

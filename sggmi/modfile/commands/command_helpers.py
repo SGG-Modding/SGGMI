@@ -1,67 +1,38 @@
+__all__ = ["instance", "stdpayload"]
 
-__all__ = ["instance","stdpayload"]
+from typing import Iterable, List, Mapping, Tuple
+from . import Command
 
-from ..modfile import ModEdit
 
-def instance(*args,**kwargs):
-    return lambda cls: cls(*args,**kwargs)
+def lookup_command(
+    tokens: Iterable[str], lookup_table: Mapping
+) -> Tuple[Command, List[str]]:
+    """Lookup command for given tokens in lookup_table
 
-def stdpayload(command, tokens, info, n=None, **const):
-    config = const["config"]
-    filemods = const["filemods"]
-    for scopepath in info["target"]:
-        path = PurePath.joinpath(config.scope_dir, scopepath)
-        if util.in_scope(path,config):
-            args = [tokens[i::n] for i in range(n)]
-            for i in range(len(args[-1])):
-                sources = [
-                    PurePath.joinpath(reldir, arg[i].replace('"', "")) for arg in args
-                ]
-                paths = []
-                num = -1
-                for source in sources:
-                    if PurePath.joinpath(config.mods_dir, source).is_dir():
-                        tpath = []
-                        for entry in PurePath.joinpath(
-                            config.mods_dir, source
-                        ).iterdir():
-                            if util.in_scope(
-                                entry,
-                                config.local_dir,
-                                config.base_cache_dir,
-                                config.edit_cache_dir,
-                                config.scope_dir,
-                            ):
-                                tpath.append(entry.as_posix())
-                        paths.append(tpath)
-                        if num > len(tpath) or num < 0:
-                            num = len(tpath)
-                    elif util.in_scope(PurePath.joinpath(config.mods_dir, source), config):
-                        paths.append(
-                            PurePath.joinpath(config.mods_dir, source)
-                            .resolve()
-                            .as_posix()
-                        )
-                if paths:
-                    for j in range(abs(num)):
-                        sources = [x[j] if isinstance(x, list) else x for x in paths]
-                        for src in sources:
-                            todeploy[src] = util.merge_dict(todeploy.get(src), config)
-                        f = lambda x: map(
-                            lambda y: PurePath.joinpath(config.deploy_rel_dir, y), x
-                        )
-                        filemods[scopepath].append(
-                            ModEdit(
-                                "\n".join(
-                                    [
-                                        Path(source).resolve().as_posix()
-                                        for source in sources
-                                    ]
-                                ),
-                                tuple(f(sources)),
-                                command.payload,
-                                info["priority"],
-                                scopepath,
-                                len(filemods[scopepath])
-                            )
-                        )
+    Parameters
+    ----------
+    tokens : Iterable[str]
+        tokens to find Command for
+    lookup_table : Mapping
+        nested lookup table of all Command subclasses
+
+    Returns
+    -------
+    (Command, List[str])
+        (command, parameters) for command that matches specified tokens
+
+    Raises
+    ------
+    KeyError, RuntimeError
+        if no path exists for specified tokens
+    """
+    target_command = None
+    lookup_layer = lookup_table
+    for idx, token in enumerate(tokens):
+        target_command = lookup_layer[token]
+        if isinstance(target_command, Command):
+            return (target_command, tokens[idx + 1 :])
+
+        lookup_layer = target_command
+
+    raise RuntimeError("No command found for given tokens")

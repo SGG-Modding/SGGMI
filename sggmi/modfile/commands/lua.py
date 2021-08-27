@@ -1,14 +1,14 @@
-from . import instance, stdpayload
-from ..modfile import Command, Payload
+from . import instance, generate_mod_edit, Command, Payload
 
-__all__ = ["Import","TopImport"]
+__all__ = ["Import", "TopImport"]
 
 ## LUA import statement adding
 def addimport(base, path):
-    with open(base, "a") as basefile:
-        basefile.write(f"\nImport {path}")
+    with open(base, "a") as base_file:
+        base_file.write(f'\nImport "{path}"')
 
-#Import
+
+# Import
 @instance()
 class Import(Command):
 
@@ -16,28 +16,27 @@ class Import(Command):
 
     @instance()
     class payload(Payload):
+        def act(self, target, source, *args, **kwargs):
+            addimport(target, source)
 
-        def act(self,target,source,*args,**kwargs):
-            addimport(target,source)
+    def run(self, tokens, modfile_state, **kwargs):
+        generate_mod_edit(self, tokens, modfile_state, **kwargs)
 
-    def run(self,tokens,info,**const):
-        stdpayload(self,tokens,info,1,**const)
 
-#Top Import
+# Top Import
 @instance()
 class TopImport(Command):
 
-    keywords = ("Top","Import")
+    keywords = ("Top", "Import")
 
     @instance()
     class payload(Payload):
 
         order = -1
-        
-        def act(self,target,source,*args,**kwargs):
+
+        def act(self, target, source, *args, **kwargs):
             ##TO BE IMPLEMENTED
             pass
 
-    def run(self,tokens,info,**const):
-        stdpayload(self,tokens,info,1,**const)
-
+    def run(self, tokens, modfile_state, **const):
+        generate_mod_edit(self, tokens, modfile_state, **const)
