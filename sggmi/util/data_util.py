@@ -100,6 +100,7 @@ def merge_dict(base_dict, input_dict, modify_original=True):
 
     return target_dict
 
+
 def prune(data, modify_original=True):
     """
     Remove elements from dict or list if value is None
@@ -122,7 +123,8 @@ def prune(data, modify_original=True):
 
     if isinstance(data, list):
         data = [
-            prune(element, modify_original=False) for element in data
+            prune(element, modify_original=False)
+            for element in data
             if element is not None
         ]
 

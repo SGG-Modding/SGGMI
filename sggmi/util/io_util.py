@@ -1,5 +1,6 @@
 import warnings
 
+
 def alt_open(*args, **kwargs):
     return open(*args, encoding="utf-8-sig", **kwargs)
 
@@ -25,13 +26,13 @@ def alt_print(*args, **kwargs):
 
 def alt_warn(message, **kwargs):
     config = kwargs.pop("config")
-    
+
     if config.log and config.echo:
         config.logger.warning(message)
     else:
         warnings.warn(message, stacklevel=2)
 
-    #alt_print(message, config=config)
+    # alt_print(message, config=config)
 
 
 def alt_input(*args, **kwargs):

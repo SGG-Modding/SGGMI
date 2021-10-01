@@ -1,6 +1,7 @@
 from pathlib import Path, PurePath
 from .io_util import alt_warn, alt_open
 
+
 class Signal:
     truth = False
     message = None
@@ -124,12 +125,18 @@ def is_edited(base, config):
 def check_scopes(config):
     game_scope = in_scope(config.scope_dir, config)
     if not game_scope.message == "DirInScope":
-        alt_warn(f"FAILED {config.scope_dir} is not in scope: {game_scope.message}", config=config)
+        alt_warn(
+            f"FAILED {config.scope_dir} is not in scope: {game_scope.message}",
+            config=config,
+        )
         return Signal(False, "GameNotInScope")
 
     deploy_scope = in_scope(config.deploy_dir, config)
     if not in_scope(config.deploy_dir, config, True).message == "DirInScope":
-        alt_warn(f"FAILED {config.scope_dir} is not in scope: {deploy_scope.message}", config=config)
+        alt_warn(
+            f"FAILED {config.scope_dir} is not in scope: {deploy_scope.message}",
+            config=config,
+        )
         return Signal(False, "DeployNotInScope")
 
     return Signal(True)
