@@ -134,6 +134,8 @@ class SggmiConfiguration:
     def detect_profile(self):
         game_name = self.this_file.parent.parent.name
         self.profile = DEFAULT_PROFILES.get(game_name, None)
+        if self.profile:
+            self.chosen_profile = game_name
 
     def set_profile(self, special_profile=None):
 

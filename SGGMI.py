@@ -214,7 +214,7 @@ def start(config):
 
     deploy_mods(to_deploy, config)
 
-    chosen_profile = config.chosen_profile if config.chosen_profile else "empty profile"
+    chosen_profile = config.chosen_profile or "empty profile"
 
     alt_print(f"\nModified files for {chosen_profile}:", config=config)
     for base, mods in file_mods.items():
