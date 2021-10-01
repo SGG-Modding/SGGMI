@@ -1,11 +1,12 @@
+from pathlib import PurePath
 from . import instance, generate_mod_edit, Command, Payload
 
 __all__ = ["Import", "TopImport"]
 
 ## LUA import statement adding
-def addimport(base, path):
+def addimport(base: PurePath, path: str):
     with open(base, "a") as base_file:
-        base_file.write(f'\nImport "{path}"')
+        base_file.write(f'\nImport "{PurePath(path).as_posix()}"')
 
 
 # Import

@@ -89,9 +89,11 @@ def resolve_source(
 
     if full_source_path.is_dir():
         for entry in full_source_path.iterdir():
-            resolve_source(full_source_path, entry, resolved_sources, config)
-
-    resolved_sources.append(full_source_path.resolve().as_posix())
+            resolve_source(
+                full_source_path, PurePath(entry).name, resolved_sources, config
+            )
+    else:
+        resolved_sources.append(full_source_path.resolve().as_posix())
 
 
 def generate_mod_edit(
