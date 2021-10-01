@@ -39,9 +39,9 @@ def load_mod(
             load_mod(entry, **kwargs)
         return
 
-    rel_name = modfile_path.relative_to(config.mods_dir).parent
+    rel_name = modfile_path.relative_to(config.mods_dir)
     if config.echo:
-        util.alt_print(f"- {rel_name}", config=config)
+        util.alt_print(f"- {rel_name.parent}", config=config)
 
     rel_dir = rel_name.parent
     try:
@@ -96,7 +96,6 @@ def parse_modfile(data: str) -> List[str]:
         ]
         for line in modfile_lines
     ]
-
     commands_and_parameters = []
     for tokens in lists_of_tokens:
         try:
@@ -123,8 +122,6 @@ def execute_modfile(modfile_path, rel_dir, **kwargs):
 
     for command, parameters in parsed_modfile:
         if not command.valid_parameters(parameters):
-            alt_print(f"{command}: Invalid amount of parameters ({parameters})")
             continue
 
         command.run(parameters, modfile_state, rel_dir=rel_dir, **kwargs)
-        break
