@@ -2,6 +2,7 @@
 import os
 from pathlib import Path, PurePath
 
+
 class Signal:
     __slots__ = ["truth", "message"]
 
@@ -68,7 +69,7 @@ def is_subfile(filename, folder):
         return Signal(True, "SubFile")
 
     return Signal(False, "UnknownError")
-    
+
 
 def in_scope(filename, localdir, basedir, editdir, scopedir, permit_DNE=False):
     if not (filename.exists() or permit_DNE):
@@ -112,7 +113,9 @@ def alt_print(*args, **kwargs):
     if do_echo:
         return print(*args, **kwargs)
     if do_log:
-        tlog = PurePath.joinpath(logsdir, f"temp-{logfile_prefix}{thetime()}{logfile_suffix}")
+        tlog = PurePath.joinpath(
+            logsdir, f"temp-{logfile_prefix}{thetime()}{logfile_suffix}"
+        )
         with alt_open(tlog, "w") as temp_file:
             print(file=temp_file, *args, **kwargs)
 
@@ -120,7 +123,7 @@ def alt_print(*args, **kwargs):
             data = temp_file.read()
 
         tlog.unlink()
-        return logging.getLogger(__name__).info(data)        
+        return logging.getLogger(__name__).info(data)
 
 
 def alt_warn(message):
@@ -136,7 +139,9 @@ def alt_input(*args, **kwargs):
         print(*args)
         return kwargs.get("default", None)
     if do_log:
-        tlog = PurePath.joinpath(logsdir, f"temp-{logfile_prefix}{thetime()}{logfile_suffix}")
+        tlog = PurePath.joinpath(
+            logsdir, f"temp-{logfile_prefix}{thetime()}{logfile_suffix}"
+        )
         with alt_open(tlog, "w") as temp_file:
             print(file=temp_file, *args)
 
@@ -214,7 +219,7 @@ def modfile_tokenise(line):
 
 
 class Mod:
-    """ modcode data structure """
+    """modcode data structure"""
 
     mode = ""
 
