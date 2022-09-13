@@ -1,7 +1,10 @@
 import pathlib  # GameFileABC
+import xml.etree.ElementTree as xml  # XmlGameFile
 from abc import ABC, abstractmethod  # GameFileABC
-from enum import Enum  # GameFileABC
-from typing import Any, Optional, Union  # GameFileABC
+from enum import Enum  # GameFileABC, XmlGameFile
+from typing import Any, Optional, Union  # GameFileABC, XmlGameFile
+
+from .exceptions import InvalidGameFile
 
 
 class GameFileABC(ABC):
@@ -86,3 +89,130 @@ class GameFileABC(ABC):
         input_file = cls(input_file_path)
 
         base_file.update(input_file.contents)
+
+
+class XmlGameFile(GameFileABC):
+    """Class to read, write, and interact with XML game files"""
+
+    class RESERVED(Enum):
+        REPLACE = "_replace"
+        DELETE = "_delete"
+
+    def get(self, key, context: Optional[Any] = None):
+        context = context or self.contents
+
+        if isinstance(context, list):
+            if isinstance(key, int):
+                if key < len(context) and key >= 0:
+                    return context[key]
+
+        if isinstance(context, xml.ElementTree):
+            root = context.getroot()
+            if root:
+                return root.get(key)
+
+        if isinstance(context, xml.Element):
+            return context.get(key)
+
+        raise ValueError("Provided context is not valid.")
+
+    def read(self):
+        try:
+            return xml.parse(self.file_path)
+        except xml.ParseError as exc:
+            raise InvalidGameFile() from exc
+
+    def write(self, start=None):
+        if not isinstance(self.content, xml.ElementTree):
+            raise ValueError("Argument 'content' must be of type 'xml.ElementTree'")
+
+        self.content.write(self.file_path)
+        self.format()
+
+    def format(self):
+        # Indentation styling
+        data = ""
+
+        with open(self.file_path, "r") as input_file:
+            i = 0
+            for line in input_file:
+                if len(line.replace("\t", "").replace(" ", "")) > 1:
+                    q = True
+                    p = ""
+                    for s in line:
+                        if s == '"':
+                            q = not q
+                        if p == "<" and q:
+                            if s == "/":
+                                i -= 1
+                                data = data[:-1]
+                            else:
+                                i += 1
+                            data += p
+                        if s == ">" and p == "/" and q:
+                            i -= 1
+                        if p in (" ") or (s == ">" and p == '"') and q:
+                            data += "\n" + "\t" * (i - (s == "/"))
+                        if s not in (" ", "\t", "<") or not q:
+                            data += s
+                        p = s
+
+        with open(self.file_path, "w") as output_file:
+            output_file.write(data)
+
+    def update(self, changes):
+        if not changes:
+            return
+
+        if type(self.contents) == type(changes):
+            if isinstance(changes, dict):
+                for k, v in changes.items():
+                    self.contents[k] = self.update(self.contents.get(k), v)
+                return self.contents
+            if isinstance(changes, xml.ElementTree):
+                root = self.update(self.contents.getroot(), changes.getroot())
+                if root:
+                    self.contents._setroot(root)
+                return self.contents
+            elif isinstance(changes, xml.Element):
+                mtags = dict()
+                for v in changes:
+                    if not mtags.get(v.tag, False):
+                        mtags[v.tag] = True
+                for tag in mtags:
+                    mes = changes.findall(tag)
+                    ies = self.contents.findall(tag)
+                    for i, me in enumerate(mes):
+                        ie = self.get(i, context=ies)
+                        if not ie:
+                            self.contents.append(me)
+                            continue
+
+                        if me.get(self.RESERVED.DELETE) not in {
+                            None,
+                            "0",
+                            "false",
+                            "False",
+                        }:
+                            self.contents.remove(ie)
+                            continue
+
+                        if me.get(self.RESERVED.REPLACE) not in {
+                            None,
+                            "0",
+                            "false",
+                            "False",
+                        }:
+                            ie.text = me.text
+                            ie.tail = me.tail
+                            ie.attrib = me.attrib
+                            del ie.attrib[self.RESERVED.REPLACE]
+                            continue
+                        ie.text = self.update(ie.text, me.text)
+                        ie.tail = self.update(ie.tail, me.tail)
+                        ie.attrib = self.update(ie.attrib, me.attrib)
+                        self.update(ie, me)
+                return self.contents
+            return changes
+
+        return changes
