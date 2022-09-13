@@ -1,0 +1,2 @@
+class InvalidGameFile(Exception):
+    pass
