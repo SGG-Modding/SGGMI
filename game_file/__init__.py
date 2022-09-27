@@ -348,3 +348,20 @@ class SjsonGameFile(GameFileABC):
                 return base_data
 
         return new_data
+
+
+class LuaGameFile(GameFileABC):
+    def get(self, key, context):
+        # This makes no sense for a Lua file
+        pass
+
+    def read(self):
+        with open(self.file_path, "r") as input_file:
+            return input_file.read()
+
+    def write(self):
+        with open(self.file_path, "w") as output_file:
+            output_file.write(self.contents)
+
+    def add_import(self, mod_path):
+        self.contents.append(f'\nImport "{mod_path}"')
