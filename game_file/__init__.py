@@ -1,107 +1,22 @@
 from collections import OrderedDict  # SjsonGameFile
-import pathlib  # GameFileABC
 import xml.etree.ElementTree as xml  # XmlGameFile
-from abc import ABC, abstractmethod  # GameFileABC
-from enum import Enum  # GameFileABC, XmlGameFile
-from typing import Any, Optional, Union  # GameFileABC, XmlGameFile
+from enum import Enum  # XmlGameFile
+from typing import Any, Optional  # XmlGameFile
 
+from .abc import GameFile
 from .exceptions import InvalidGameFile
 from .util import prune
 import sjson  # pip: SJSON
 
 
-class GameFileABC(ABC):
-    """Abstract base class for game files.
-
-    Contains a default implementation for __init__
-    """
-
-    path: pathlib.Path
-    contents: Optional[Any]
-    RESERVED: Optional[Enum]
-
-    def __init__(self, file_path: pathlib.Path):
-        """Create a GameFile object and load contents
-
-
-        Parameters
-        ----------
-        file_path : Path
-            path to GameFile
-        """
-        self.path = file_path
-        self.contents = self.read()
-
-    @abstractmethod
-    def get(self, key: Union[str, int], context: Optional[Any] = None) -> Any:
-        """Get value of key from context. If context is not None, use GameFile contents
-
-        Parameters
-        ----------
-        key : Union[str, int]
-            value to read from context
-        context: Optional[Any], default: None
-            data to get key from. If None, use GameFile contents
-        """
-        ...
-
-    @abstractmethod
-    def read(self) -> Any:
-        """Returns contents of GameFile
-
-        Should raise game_file.exceptions.InvalidGameFile if the file is invalid
-        """
-        ...
-
-    @abstractmethod
-    def write(self):
-        """Write self.contents back to self.file_path"""
-        ...
-
-    def format(self):
-        """This function should be called after each write, for GameFiles that require
-        specific formatting. By default this function will do nothing.
-        """
-        pass
-
-    @abstractmethod
-    def update(self, changes: Any, autowrite: bool = True):
-        """Update self.contents with the specified changes
-
-        Parameters
-        ----------
-        changes : Any
-            changes to make to self.contents
-        autowrite : bool, default: True
-            If True, write changes back to file after updating
-        """
-        ...
-
-    @classmethod
-    def merge(cls, base_file_path: pathlib.Path, input_file_path: pathlib.Path):
-        """Merge the contents of input_file into base_file
-
-        Parameters
-        ----------
-        base_file : pathlib.Path
-            file to merge changes into
-        input_file : pathlib.Path
-            file containing content to merge into base_file
-        """
-        base_file = cls(base_file_path)
-        input_file = cls(input_file_path)
-
-        base_file.update(input_file.contents)
-
-
-class XmlGameFile(GameFileABC):
+class XmlGameFile(GameFile):
     """Class to read, write, and interact with XML game files"""
 
     class RESERVED(Enum):
         REPLACE = "_replace"
         DELETE = "_delete"
 
-    def get(self, key, context: Optional[Any] = None):
+    def get(self, key, context: Optional[Any] = None) -> Any:
         context = context or self.contents
 
         if isinstance(context, list):
@@ -109,15 +24,19 @@ class XmlGameFile(GameFileABC):
                 if key < len(context) and key >= 0:
                     return context[key]
 
+            return None
+
         if isinstance(context, xml.ElementTree):
             root = context.getroot()
             if root:
                 return root.get(key)
 
+            return None
+
         if isinstance(context, xml.Element):
             return context.get(key)
 
-        raise ValueError("Provided context is not valid.")
+        raise TypeError("Provided context is not valid.")
 
     def read(self):
         try:
@@ -126,10 +45,10 @@ class XmlGameFile(GameFileABC):
             raise InvalidGameFile() from exc
 
     def write(self, start=None):
-        if not isinstance(self.content, xml.ElementTree):
-            raise ValueError("Argument 'content' must be of type 'xml.ElementTree'")
+        if not isinstance(self.contents, xml.ElementTree):
+            raise TypeError("'content' must be of type 'xml.ElementTree'.")
 
-        self.content.write(self.file_path)
+        self.contents.write(self.file_path)
         self.format()
 
     def format(self):
@@ -163,7 +82,7 @@ class XmlGameFile(GameFileABC):
         with open(self.file_path, "w") as output_file:
             output_file.write(data)
 
-    def update(self, changes):
+    def update(self, changes, autowrite: bool = True):
         if not changes:
             return
 
@@ -221,7 +140,7 @@ class XmlGameFile(GameFileABC):
         return changes
 
 
-class SjsonGameFile(GameFileABC):
+class SjsonGameFile(GameFile):
     class RESERVED(Enum):
         SEQUENCE = "_sequence"
         APPEND = "_append"
@@ -350,7 +269,7 @@ class SjsonGameFile(GameFileABC):
         return new_data
 
 
-class LuaGameFile(GameFileABC):
+class LuaGameFile(GameFile):
     def get(self, key, context):
         # This makes no sense for a Lua file
         pass
