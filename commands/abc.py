@@ -42,9 +42,17 @@ class Command(ABC):
         return self.__class__.__name__
 
     @abstractmethod
-    def run(self, modfile_state, **kwargs):
+    def process(self, modfile_state, **kwargs):
         ...
 
     def valid_parameters(self, tokens: Iterable[str]) -> bool:
         """Check whether tokens match the amount valid for command"""
         return self.min_tokens <= len(tokens) <= self.max_tokens
+
+
+class ExecutableCommand(Command):
+    """A command that can be executed"""
+
+    @abstractmethod
+    def execute(self, mod_edit, **kwargs):
+        ...

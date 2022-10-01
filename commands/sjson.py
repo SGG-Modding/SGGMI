@@ -1,14 +1,24 @@
-__all__ = ["SJSON"]
+from game_file import SjsonGameFile
 
-from .abc import Command
+from .abc import ExecutableCommand
+from .mod_edit import ModEdit
 
-# SJSON
-class SJSON(Command):
+class SJSON(ExecutableCommand):
 
-    keywords = ("SJSON",)
+    keywords = ["SJSON"]
 
     def __init__(self, tokens, *args, **kwargs):
         self.mod_file = tokens[0]
 
-    def run(self, modfile_state, **const):
-        generate_mod_edit(self, tokens, modfile_state, **const)
+    def process(self, modfile_state, **kwargs):
+        return ModEdit(
+            type(self),
+            self.mod_file,
+            modfile_state["target"],
+            SjsonGameFile,
+            modfile_state["priority"],
+            **kwargs,
+        )
+
+    def execute(self, mod_edit: ModEdit, **kwargs):
+        mod_edit.target_file.update(mod_edit.mod_file)
