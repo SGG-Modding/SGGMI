@@ -1,3 +1,5 @@
+from datetime import datetime
+
 def get_attribute(data, key, default=None):
     """
     Return value at 'key' from dictionary, list, or tuple
@@ -74,8 +76,8 @@ def merge_dict(base_dict, input_dict):
     if not input_dict:
         return base_dict
 
-    # Create new dict if modify_original is False
-    target_dict = dict(base_dict) if not modify_original else base_dict
+    # Create new dict
+    target_dict = dict(base_dict)
 
     for key in input_dict:
         if key not in target_dict:
@@ -93,35 +95,5 @@ def merge_dict(base_dict, input_dict):
 
     return target_dict
 
-
-def prune(data, modify_original=True):
-    """
-    Remove elements from dict or list if value is None
-
-    Arguments:
-    data -- dict or list to remove elements from
-
-    Keyword Arguments:
-    modify_original -- If False, original dict or list is left intact (Default: True)
-
-    Returns:
-    Resulting dict or list after merging
-    """
-    if isinstance(data, dict):
-        target = type(data)()
-
-        for key, value in data.items():
-            if value is not None:
-                target[key] = prune(value, modify_original=False)
-
-    if isinstance(data, list):
-        data = [
-            prune(element, modify_original=False)
-            for element in data
-            if element is not None
-        ]
-
-    if modify_original:
-        data = target
-
-    return target
+def get_timestamp():
+    return datetime.now().strftime("%d.%m.%Y-%I.%M%p-%S.%f")
