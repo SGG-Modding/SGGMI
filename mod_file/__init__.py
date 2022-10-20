@@ -10,6 +10,7 @@ import re
 from commands import Command, lookup_table
 from commands.util import lookup_command
 from .util import remove_comments
+from util.file import is_subfile, is_subdirectory
 
 
 DEFAULT_PRIORITY = 100
@@ -25,18 +26,15 @@ class ParsingError(Exception):
     def __str__(self):
         return f"Failed to parse: '{' '.join(self.tokens)}'"
 
+
 class ModFile:
 
     path: pathlib.Path
+    parsed: list[tuple]
 
     def __init__(self, file_path):
         self.path = pathlib.Path(file_path)
-
-    def is_subfile(self, target_directory) -> bool:
-        return self.path.relative_to(target_directory) and self.path.is_file()
-
-    def is_subdirectory(self, target_directory) -> bool:
-        return self.path.relative_to(target_directory) and self.path.is_dir()
+        self.parsed = self.parse()
 
     def read(self):
         with open(self.path, "r", encoding="utf-8-sig") as modfile:
@@ -76,29 +74,34 @@ class ModFile:
             for line in modfile_lines
         ]
 
-        commands_and_parameters = []
+        commands = []
         for tokens in lists_of_tokens:
             try:
                 command, parameters = lookup_command(tokens, lookup_table)
-                commands_and_parameters.append((command, parameters))
+                commands.append(command(parameters))
             except (KeyError, RuntimeError):
                 raise ParsingError(tokens)
 
-        return commands_and_parameters
+        return commands
 
-    def execute(self, rel_dir, **kwargs):
-        """Open modfile, parse contents, and execute commands"""
+    def process(self, rel_dir, **kwargs):
+        """Open modfile, parse contents, and generate relevant ModEdits"""
         config = kwargs["config"]
 
         modfile_state = {
             "priority": DEFAULT_PRIORITY,
-            "target": (config.profile.get("default_target", []) if config.profile else []),
+            "target": (
+                config.profile.get("default_target", []) if config.profile else []
+            ),
         }
 
-        parsed_modfile = self.parse()
+        mod_edits = []
+        for command in self.parsed.items():
+            mod_edit = command.process(modfile_state, rel_dir=rel_dir, **kwargs)
+            if mod_edit:
+                mod_edits.append(mod_edit)
 
-        for command in parsed_modfile:
-            command.run(modfile_state, rel_dir=rel_dir, **kwargs)
+        return mod_edits
 
 def load_mod(
     modfile: ModFile,
@@ -107,10 +110,13 @@ def load_mod(
     """Run modfile specified by modfile_path. If it's a directory, recurse."""
     config = kwargs["config"]
 
-    if modfile.is_subdirectory(config.mods_dir):
+    if is_subdirectory(modfile.path, config.mods_dir):
         for entry in Path(modfile.path).iterdir():
             load_mod(entry, **kwargs)
         return
+
+    if not is_subfile(modfile.path, config.mods_dir):
+        raise Exception(f"{modfile.path} is not part of {config.mods_dir}!")
 
     rel_name = modfile.path.relative_to(config.mods_dir)
     if config.echo:
@@ -123,4 +129,3 @@ def load_mod(
         print(f"{rel_name} - {exc}")
     except IOError:
         return
-
