@@ -3,6 +3,7 @@ from game_file import SjsonGameFile
 from .abc import ExecutableCommand
 from .mod_edit import ModEdit
 
+
 class SJSON(ExecutableCommand):
 
     keywords = ["SJSON"]

@@ -99,17 +99,13 @@ class SggmiConfiguration:
     @property
     def logs_dir(self):
         if not getattr(self, "_logs_dir", None):
-            self._logs_dir = Path.joinpath(
-                self.scope_dir, self.logs_rel_dir
-            ).resolve()
+            self._logs_dir = Path.joinpath(self.scope_dir, self.logs_rel_dir).resolve()
         return self._logs_dir
 
     @property
     def mods_dir(self):
         if not getattr(self, "_mods_dir", None):
-            self._mods_dir = Path.joinpath(
-                self.scope_dir, self.mods_rel_dir
-            ).resolve()
+            self._mods_dir = Path.joinpath(self.scope_dir, self.mods_rel_dir).resolve()
         return self._mods_dir
 
     @classmethod
@@ -155,10 +151,13 @@ class SggmiConfiguration:
             logging.warning(messages.missing_folder_profile(self.config_file))
             exit(1)
         else:
-            self.folder_profile = util.merge_dict(self.folder_profile, DEFAULT_PROFILES[self.chosen_profile])
+            self.folder_profile = util.merge_dict(
+                self.folder_profile, DEFAULT_PROFILES[self.chosen_profile]
+            )
 
         if profile is None:
             logging.warning(messages.missing_folder_profile(self.config_file))
             profile = {}
+
 
 config = SggmiConfiguration()

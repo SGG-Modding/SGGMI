@@ -3,6 +3,7 @@ from enum import Enum  # GameFile
 import pathlib  # GameFile
 from typing import Any, Optional, Union  # GameFile
 
+
 class GameFile(ABC):
     """Abstract base class for game files.
 
@@ -99,4 +100,3 @@ class GameFile(ABC):
         input_file = cls(input_file_path)
 
         base_file.update(input_file.contents)
-

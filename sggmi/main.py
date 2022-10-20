@@ -26,4 +26,3 @@ def main(*args, **kwargs):
         logging.getLogger("root").exception(exc)
 
     input("Press any key to end program...")
-

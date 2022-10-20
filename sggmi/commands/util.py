@@ -2,6 +2,7 @@ from pathlib import PurePath
 from typing import Iterable, Mapping
 from . import Command
 
+
 def lookup_command(
     tokens: Iterable[str], lookup_table: Mapping
 ) -> tuple["Command", list[str]]:
@@ -34,6 +35,7 @@ def lookup_command(
         lookup_layer = target_command
 
     raise RuntimeError("No command found for given tokens")
+
 
 def resolve_source(
     base_path: PurePath, source: str, resolved_sources: list[str], config: Mapping

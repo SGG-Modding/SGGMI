@@ -3,6 +3,7 @@ from typing import TypeVar
 
 T = TypeVar("T")
 
+
 def prune(data: T) -> T:
     """Create a copy of the provided data with any keys where the value
     is None removed recursively. If an object other than a list, dict, or
@@ -20,17 +21,11 @@ def prune(data: T) -> T:
     """
     if isinstance(data, OrderedDict):
         return OrderedDict(
-            (key, prune(value))
-            for key, value in data.items()
-            if value is not None
+            (key, prune(value)) for key, value in data.items() if value is not None
         )
 
     if isinstance(data, dict):
-        return {
-            key: prune(value)
-            for key, value in data.items()
-            if value is not None
-        }
+        return {key: prune(value) for key, value in data.items() if value is not None}
 
     if isinstance(data, list):
         return [prune(item) for item in data if item is not None]

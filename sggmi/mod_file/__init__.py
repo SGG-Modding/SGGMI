@@ -103,6 +103,7 @@ class ModFile:
 
         return mod_edits
 
+
 def load_mod(
     modfile: ModFile,
     **kwargs: Mapping,

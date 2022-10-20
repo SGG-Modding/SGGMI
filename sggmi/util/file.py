@@ -2,13 +2,16 @@ from pathlib import PurePath
 from typing import Mapping
 import hashlib
 
+
 def is_subfile(target_path: PurePath, parent_path: PurePath) -> bool:
     return target_path.relative_to(parent_path) and target_path.is_file()
+
 
 def is_subdirectory(target_path: PurePath, parent_path: PurePath) -> bool:
     return target_path.relative_to(parent_path) and target_path.is_dir()
 
-def in_scope(filename: PurePath, config: Mapping, permit_DNE: bool=False) -> bool:
+
+def in_scope(filename: PurePath, config: Mapping, permit_DNE: bool = False) -> bool:
     if not (permit_DNE or filename.exists()):
         return False
 
@@ -19,11 +22,15 @@ def in_scope(filename: PurePath, config: Mapping, permit_DNE: bool=False) -> boo
 
     return True
 
+
 def in_source(filename: PurePath, config: Mapping, permit_DNE=False) -> bool:
     if not (filename.exists() or permit_DNE):
         return False
 
-    return filename.relative_to(config.scope_dir) and config.mods_dir.relative_to(config.scope_dir)
+    return filename.relative_to(config.scope_dir) and config.mods_dir.relative_to(
+        config.scope_dir
+    )
+
 
 def is_edited(base, config) -> bool:
     edited_path: PurePath = config.edit_cache_dir / f"{base}{config.edited_suffix}"

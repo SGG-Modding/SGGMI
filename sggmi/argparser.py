@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 
+
 def get_parser():
     """
     Generates and returns an ArgumentParser for SGGMI.

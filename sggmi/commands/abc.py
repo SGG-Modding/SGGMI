@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod  # Command
 from typing import Iterable  # Command
 
+
 class Command(ABC):
     """Class holding defined Mod actions"""
 
