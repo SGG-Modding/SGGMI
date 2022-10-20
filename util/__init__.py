@@ -1,18 +1,21 @@
 from datetime import datetime
 
+
 def get_attribute(data, key, default=None):
-    """
-    Return value at 'key' from dictionary, list, or tuple
+    """Return value at 'key' from dictionary, list, or tuple
 
-    Arguments:
-    data -- dictionary, list, or tuple to get value at 'key' from
-    key -- index or key to get from 'data'
-
-    Keyword Arguments:
-    default -- value to return if no value is found at 'key' (Default: None)
+    Parameters
+    ----------
+    data : Union[dict, list, tuple]
+        collection to get value at 'key' from
+    key : Union[int, str]
+        index or key to get from 'data'
+    default : Optional[Any], default: None
+        value to return if no value is found at 'key'
 
     Returns:
-    Value at 'key' or provided 'default' value
+    Any
+        Value at 'key' or provided 'default' value
     """
     result = default
 
@@ -33,16 +36,21 @@ def get_attribute(data, key, default=None):
 
 
 def set_attribute(data, key, value):
-    """
-    Set value at 'key' in a dictionary or list
+    """Set value at 'key' in a dictionary or list
 
-    Arguments:
-    data -- dictionary or list to modify
-    key -- index or key to set in 'data'
-    value -- value to store at 'key' in 'data'
+    Parameters
+    ----------
+    data : Union[list, dict]
+        collection to modify
+    key : Union[int, str]
+        index or key to set in 'data'
+    value : Any
+        value to store at 'key' in 'data'
 
-    Returns:
-    True if value was updated
+    Returns
+    -------
+    bool
+        True if value was updated
     """
     if isinstance(data, list) and isinstance(key, int) and 0 <= key < len(data):
         data[key] = value
@@ -56,19 +64,21 @@ def set_attribute(data, key, value):
 
 
 def merge_dict(base_dict, input_dict):
-    """
-    Merge input_dict into base_dict, overwriting entries in base_dict as needed.
+    """Create a new dict consisting of base_dict with input_dict merged into it,
+    overwriting entries in base_dict as needed.
 
-    Arguments:
-    base_dict -- dictionary to start with
-    input_dict -- dictionary to merge into base_dict
-
-    Keyword Arguments:
-    modify_original -- If False, original base_dict is left intact (Default: True)
+    Parameters
+    ----------
+    base_dict : dict
+        dictionary to start with
+    input_dict : dict
+        dictionary to merge into base_dict
 
     Returns:
-    Resulting dictionary after merging
+    dict
+        Resulting dictionary after merging
     """
+
     # Check if anything needs to be done first
     if not base_dict:
         return input_dict
@@ -94,6 +104,7 @@ def merge_dict(base_dict, input_dict):
             target_dict[key] = input_dict[key]
 
     return target_dict
+
 
 def get_timestamp():
     return datetime.now().strftime("%d.%m.%Y-%I.%M%p-%S.%f")
