@@ -1,5 +1,5 @@
-from pathlib import PurePath
-from typing import Iterable, Type
+from pathlib import Path, PurePath
+from typing import Optional, Type
 
 from game_file.abc import GameFile
 
@@ -43,5 +43,8 @@ class ModEdit:
     def __str__(self):
         return f"ModEdit<{self.target_file} with {self.mod_file}>"
 
-    def execute(self):
+    def execute(self, target_path_override: Optional[Path] = None):
+        if target_path_override:
+            self.target_path = target_path_override
+
         self.command.execute(self)
